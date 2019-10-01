@@ -11,11 +11,15 @@ export interface FormWidgetProps {
   parent: FormWidgetProps | null;
 }
 
+export interface FormWidgetPropsNext extends FormWidgetProps {
+  next: (props: FormWidgetProps) => React.ReactElement | null;
+}
+
 type FormWidgetComponent = (props: FormWidgetProps) => React.ReactElement | null;
 
 export interface FormWidget {
   filter: (props: FormWidgetProps) => boolean;
-  get: (next: () => FormWidgetComponent) => FormWidgetComponent;
+  Component: React.ComponentType<FormWidgetPropsNext>;
 }
 
 const RenderSchemaContext = React.createContext<FormWidgetComponent>(() => <div>'not provided'</div>);
@@ -24,7 +28,7 @@ const ObjectWidget: FormWidget = {
   filter(props) {
     return props.schema.type === 'object';
   },
-  get: (next) => ({ schema, ...rest }) => {
+  Component: ({ schema, next, ...rest }) => {
     const WidgetComponent = React.useContext(RenderSchemaContext);
     if (!schema.properties) return null;
     const properties = schema.properties;
@@ -45,22 +49,32 @@ const StringWidget: FormWidget = {
   filter(props) {
     return props.schema.type === 'string';
   },
-  get: (next) => (props) => <div>string</div>,
+  Component: (props) => <div>string</div>,
+};
+
+const WrapStringWidget: FormWidget = {
+  filter(props) {
+    return props.schema.type === 'string';
+  },
+  Component: ({ next, ...props }) => <div>wrjjj{next(props)}wp</div>,
 };
 
 const NotFoundWidget: FormWidget = {
   filter: () => true,
-  get: () => () => <div>schema not supported</div>,
+  Component: () => <div>schema not supported</div>,
 };
 
 const createSchemaRender: (widgets: FormWidget[]) => FormWidgetComponent = (widgets: FormWidget[]) => (
   props: FormWidgetProps
 ) => {
-  const widgetIndex = widgets.findIndex(({ filter }) => filter(props));
-  if (widgetIndex < 0) return <div>'not found'</div>;
-  const widget = widgets[widgetIndex];
-  const WidgetComponent = widget.get(() => createSchemaRender(widgets.slice(widgetIndex)));
-  return <WidgetComponent {...props} />;
+  if (widgets.length === 0) return null;
+  const [widget, ...restWidgets] = widgets;
+  const next = (nextProps: FormWidgetProps) => createSchemaRender(restWidgets)(nextProps);
+  if (widget.filter(props)) {
+    const Component = widget.Component;
+    return <Component {...{ ...props, next }} />;
+  }
+  return createSchemaRender(restWidgets)(props);
 };
 
 const Form: React.FC<FormProps> = (props) => {
@@ -87,7 +101,7 @@ const formProps: FormProps = {
       },
     },
   },
-  widgets: [ObjectWidget, StringWidget, NotFoundWidget],
+  widgets: [ObjectWidget, WrapStringWidget, StringWidget, NotFoundWidget],
 };
 
 const App: React.FC = () => {
