@@ -3,7 +3,7 @@ import { JSONSchema7, JSONSchema7Definition } from 'json-schema';
 
 export interface FormProps {
   schema: JSONSchema7Definition;
-  widgets: FormWidgetType[];
+  widgets: React.ComponentType<FormWidgetPropsNext>[];
 }
 
 export interface FormWidgetProps {
@@ -19,41 +19,32 @@ export interface FormWidgetPropsNext extends FormWidgetProps {
   next: (props: FormWidgetProps) => React.ReactElement | null;
 }
 
-type FormWidgetComponent = (props: FormWidgetProps) => React.ReactElement | null;
+const RenderSchemaContext = React.createContext<React.ComponentType<FormWidgetPropsNext>>(() => (
+  <div>'not provided'</div>
+));
 
-export interface FormWidgetType {
-  filter: (props: FormWidgetProps) => boolean;
-  Component: React.ComponentType<FormWidgetPropsNext>;
-}
-
-const RenderSchemaContext = React.createContext<FormWidgetComponent>(() => <div>'not provided'</div>);
-
-export const ObjectWidget: FormWidgetType = {
-  filter({ schema }) {
-    return typeof schema !== 'boolean' && schema.type === 'object';
-  },
-  Component: ({ next, ...props }) => {
-    const { schema, schemaPath, onChange } = props;
-    const data = props.data || {};
-    const WidgetComponent = React.useContext(RenderSchemaContext);
-    if (typeof schema === 'boolean' || !schema.properties) return next(props);
-    const properties = schema.properties;
-    return (
-      <>
-        {Object.keys(properties).map((property) => (
-          <WidgetComponent
-            key={property}
-            schema={properties[property]}
-            data={data[property]}
-            onChange={(value: any) => onChange({ ...data, [property]: value })}
-            schemaPath={[...schemaPath, property]}
-            dataPath={[...schemaPath, property]}
-            parent={props}
-          />
-        ))}
-      </>
-    );
-  },
+export const ObjectWidget = ({ next, ...props }: FormWidgetPropsNext) => {
+  const { schema, schemaPath, onChange } = props;
+  const data = props.data || {};
+  const WidgetComponent = React.useContext(RenderSchemaContext);
+  if (typeof schema === 'boolean' || !schema.properties) return next(props);
+  const properties = schema.properties;
+  return (
+    <>
+      {Object.keys(properties).map((property) => (
+        <WidgetComponent
+          key={property}
+          schema={properties[property]}
+          data={data[property]}
+          onChange={(value: any) => onChange({ ...data, [property]: value })}
+          schemaPath={[...schemaPath, property]}
+          dataPath={[...schemaPath, property]}
+          parent={props}
+          next={() => null}
+        />
+      ))}
+    </>
+  );
 };
 
 export interface UseArrayReturn {
@@ -103,6 +94,7 @@ export const useArray: (
           schemaPath={[...schemaPath, 'items', i.toString()]}
           dataPath={[...dataPath, i.toString()]}
           parent={props}
+          next={() => null}
         />
       );
     });
@@ -122,7 +114,7 @@ export const useArray: (
               console.log(newIndex, data.length);
               if (newIndex < 0 || (newIndex >= items.length && newIndex < data.length)) onMove(i, newIndex);
             }}
-            next={(props) => <WidgetComponent {...props} />}
+            next={(props) => <WidgetComponent {...{ ...props, next: () => null }} />}
           />
         );
       }
@@ -142,7 +134,7 @@ export const useArray: (
           if (newIndex < data.length) onMove(i, newIndex);
         }}
         next={(props) => {
-          return <WidgetComponent {...props} />;
+          return <WidgetComponent {...{ ...props, next: () => null }} />;
         }}
       />
     ));
@@ -154,35 +146,33 @@ export const useArray: (
   };
 };
 
-export const buildArrayComponent: FormWidgetType = {
-  filter({ schema }) {
-    return typeof schema !== 'boolean' && schema.type === 'array';
-  },
-  Component({ data }) {
-    return <div>arr</div>;
-  },
+export const compose: (
+  widgets: React.ComponentType<FormWidgetPropsNext>[]
+) => React.ComponentType<FormWidgetPropsNext> = (widgets) => {
+  const Composed: React.FC<FormWidgetPropsNext> = ({ next, ...props }) => {
+    const dispatch: (props: FormWidgetProps, i: number) => React.ReactElement | null = (nextProps, i) => {
+      const Widget = widgets[i];
+      if (i >= widgets.length) return next ? next(nextProps) : null;
+      return (
+        <Widget
+          {...{
+            ...nextProps,
+            next: (props) => dispatch(props, i + 1),
+          }}
+        />
+      );
+    };
+    return dispatch(props, 0);
+  };
+  return Composed;
 };
 
-export const NotFoundWidget: FormWidgetType = {
-  filter: () => true,
-  Component: ({ schemaPath }) => <div>schema not supported, location {schemaPath.join('.')}</div>,
-};
-
-const createSchemaRender: (widgets: FormWidgetType[]) => FormWidgetComponent = (widgets: FormWidgetType[]) => (
-  props: FormWidgetProps
-) => {
-  if (widgets.length === 0) return null;
-  const [widget, ...restWidgets] = widgets;
-  const next = (nextProps: FormWidgetProps) => createSchemaRender(restWidgets)(nextProps);
-  if (widget.filter(props)) {
-    const Component = widget.Component;
-    return <Component {...{ ...props, next }} />;
-  }
-  return createSchemaRender(restWidgets)(props);
-};
+export const NotFoundWidget = ({ schemaPath }: FormWidgetPropsNext) => (
+  <div>schema not supported, location {schemaPath.join('.')}</div>
+);
 
 const Form: React.FC<FormProps> = (props) => {
-  const WidgetComponent = React.useMemo(() => createSchemaRender(props.widgets), [props.widgets]);
+  const WidgetComponent = React.useMemo(() => compose(props.widgets), [props.widgets]);
   const [data, setData] = React.useState({});
   return (
     <RenderSchemaContext.Provider value={WidgetComponent}>
@@ -193,6 +183,7 @@ const Form: React.FC<FormProps> = (props) => {
         schemaPath={[]}
         dataPath={[]}
         parent={null}
+        next={() => null}
       />
       {JSON.stringify(data)}
     </RenderSchemaContext.Provider>
