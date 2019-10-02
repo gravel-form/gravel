@@ -1,13 +1,13 @@
 import React from 'react';
-import { JSONSchema4 } from 'json-schema';
+import { JSONSchema7, JSONSchema7Definition } from 'json-schema';
 
 export interface FormProps {
-  schema: JSONSchema4;
+  schema: JSONSchema7Definition;
   widgets: FormWidgetType[];
 }
 
 export interface FormWidgetProps {
-  schema: JSONSchema4;
+  schema: JSONSchema7Definition;
   parent: FormWidgetProps | null;
   data: any;
   onChange: Function;
@@ -29,14 +29,14 @@ export interface FormWidgetType {
 const RenderSchemaContext = React.createContext<FormWidgetComponent>(() => <div>'not provided'</div>);
 
 export const ObjectWidget: FormWidgetType = {
-  filter(props) {
-    return props.schema.type === 'object';
+  filter({ schema }) {
+    return typeof schema !== 'boolean' && schema.type === 'object';
   },
   Component: ({ next, ...props }) => {
-    const { schema, schemaPath, dataPath, onChange } = props;
+    const { schema, schemaPath, onChange } = props;
     const data = props.data || {};
     const WidgetComponent = React.useContext(RenderSchemaContext);
-    if (!schema.properties) return null;
+    if (typeof schema === 'boolean' || !schema.properties) return next(props);
     const properties = schema.properties;
     return (
       <>
@@ -69,9 +69,12 @@ export const useArray: (
   props: FormWidgetPropsNext,
   AdditionalItemTemplate: React.ComponentType<AdditionalItemTemplateProps> | null
 ) => UseArrayReturn = (props, AdditionalItemTemplate = null) => {
-  const { schema, schemaPath, dataPath, onChange } = props;
-  const data = props.data || new Array(schema.length);
   const WidgetComponent = React.useContext(RenderSchemaContext);
+
+  const { schema, schemaPath, dataPath, next, onChange } = props;
+  if (!schema || typeof schema === 'boolean' || typeof schema.items === 'boolean')
+    return { onAdd: null, arrayBody: null };
+  const data = props.data || Array.from(Array.isArray(schema.items) ? { length: schema.items!.length } : []);
   const AdditionalItemComponent = AdditionalItemTemplate || WidgetComponent;
 
   const binItemUpdate = (index: number) => (value: any) => {
@@ -98,13 +101,13 @@ export const useArray: (
           schema={itemSchema}
           data={data[i]}
           schemaPath={[...schemaPath, 'items', i.toString()]}
-          dataPath={[...dataPath, 'items', i.toString()]}
+          dataPath={[...dataPath, i.toString()]}
           parent={props}
         />
       );
     });
-    if (schema.additionalItem && data.length > items.length) {
-      const additionalItemSchema = schema.additionalItem;
+    if (schema.additionalItems && data.length > items.length && typeof schema.additionalItems !== 'boolean') {
+      const additionalItemSchema = schema.additionalItems;
       for (let i = items.length; i < data.length; i += 1) {
         arrayBody.push(
           <AdditionalItemComponent
@@ -113,10 +116,11 @@ export const useArray: (
             schema={additionalItemSchema}
             data={data[i]}
             schemaPath={[...schemaPath, 'items', i.toString()]}
-            dataPath={[...dataPath, 'items', i.toString()]}
+            dataPath={[...dataPath, i.toString()]}
             parent={props}
             onMove={(newIndex) => {
-              if (newIndex < 0 || newIndex >= items.length || newIndex < data.length) onMove(i, newIndex);
+              console.log(newIndex, data.length);
+              if (newIndex < 0 || (newIndex >= items.length && newIndex < data.length)) onMove(i, newIndex);
             }}
             next={(props) => <WidgetComponent {...props} />}
           />
@@ -124,12 +128,13 @@ export const useArray: (
       }
     }
   } else if (schema.items && Array.isArray(data)) {
-    arrayBody = data.map((data, i) => (
+    const items = schema.items;
+    arrayBody = data.map((itemData, i) => (
       <AdditionalItemComponent
         key={i}
         onChange={binItemUpdate(i)}
-        schema={schema.items as JSONSchema4}
-        data={data[i]}
+        schema={items}
+        data={itemData}
         schemaPath={[...schemaPath, 'items', i.toString()]}
         dataPath={[...dataPath, 'items', i.toString()]}
         parent={props}
@@ -151,7 +156,7 @@ export const useArray: (
 
 export const buildArrayComponent: FormWidgetType = {
   filter({ schema }) {
-    return schema.type === 'array';
+    return typeof schema !== 'boolean' && schema.type === 'array';
   },
   Component({ data }) {
     return <div>arr</div>;
@@ -196,7 +201,13 @@ const Form: React.FC<FormProps> = (props) => {
 
 export default Form;
 
-export const formSchema: JSONSchema4 = {
+export const isRequired = ({ parent, dataPath }: FormWidgetProps) =>
+  parent &&
+  typeof parent.schema !== 'boolean' &&
+  parent.schema.required &&
+  parent.schema.required.includes(dataPath[dataPath.length - 1]);
+
+export const formSchema: JSONSchema7Definition = {
   type: 'object',
   required: ['foo'],
   title: 'Form',
@@ -211,7 +222,17 @@ export const formSchema: JSONSchema4 = {
     },
     qux: {
       type: 'array',
-      items: [{ type: 'string' }, { type: 'string' }],
+      title: 'array schema',
+      items: { type: 'object', required: ['a2'], properties: { a1: { type: 'string' }, a2: { type: 'string' } } },
+    },
+    multipleChoicesList: {
+      type: 'array',
+      title: 'A multiple choices list',
+      items: {
+        type: 'string',
+        enum: ['foo', 'bar', 'fuzz', 'qux'],
+      },
+      uniqueItems: true,
     },
   },
 };
