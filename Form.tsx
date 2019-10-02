@@ -114,7 +114,7 @@ export const useArray: (
               console.log(newIndex, data.length);
               if (newIndex < 0 || (newIndex >= items.length && newIndex < data.length)) onMove(i, newIndex);
             }}
-            next={(props) => <WidgetComponent {...{ ...props, next: () => null }} />}
+            next={(props) => <WidgetComponent {...props} next={() => null} />}
           />
         );
       }
@@ -133,9 +133,7 @@ export const useArray: (
         onMove={(newIndex) => {
           if (newIndex < data.length) onMove(i, newIndex);
         }}
-        next={(props) => {
-          return <WidgetComponent {...{ ...props, next: () => null }} />;
-        }}
+        next={(props) => <WidgetComponent {...props} next={() => null} />}
       />
     ));
   }
