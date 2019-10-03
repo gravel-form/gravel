@@ -1,31 +1,26 @@
 import React from 'react';
-import { JSONSchema7, JSONSchema7Definition } from 'json-schema';
+import { JSONSchema7Definition } from 'json-schema';
 import Ajv from 'ajv';
 
 export interface FormProps {
   schema: JSONSchema7Definition;
-  widgets: React.ComponentType<FormWidgetPropsNext>[];
+  widgets: React.ComponentType<MiddlewareProps>[];
 }
 
-export interface FormWidgetProps {
+export interface MiddlewareProps {
   schema: JSONSchema7Definition;
-  parent: FormWidgetProps | null;
+  parent: MiddlewareProps | null;
   data: any;
   onChange: Function;
   schemaPath: (string | number)[];
   dataPath: (string | number)[];
+  next: (props: MiddlewareProps) => React.ReactElement | null;
 }
 
-export interface FormWidgetPropsNext extends FormWidgetProps {
-  next: (props: FormWidgetProps) => React.ReactElement | null;
-}
+const RenderSchemaContext = React.createContext<React.ComponentType<MiddlewareProps>>(() => <div>'not provided'</div>);
 
-const RenderSchemaContext = React.createContext<React.ComponentType<FormWidgetPropsNext>>(() => (
-  <div>'not provided'</div>
-));
-
-export const ObjectWidget = ({ next, ...props }: FormWidgetPropsNext) => {
-  const { schema, schemaPath, onChange } = props;
+export const ObjectWidget = (props: MiddlewareProps) => {
+  const { schema, schemaPath, onChange, next } = props;
   const data = props.data || {};
   const WidgetComponent = React.useContext(RenderSchemaContext);
   if (typeof schema === 'boolean' || !schema.properties) return next(props);
@@ -53,17 +48,17 @@ export interface UseArrayReturn {
   arrayBody: React.ReactElement[] | null;
 }
 
-export interface AdditionalItemTemplateProps extends FormWidgetPropsNext {
+export interface AdditionalItemTemplateProps extends MiddlewareProps {
   onMove: (newIndex: number) => void;
 }
 
 export const useArray: (
-  props: FormWidgetPropsNext,
+  props: MiddlewareProps,
   AdditionalItemTemplate: React.ComponentType<AdditionalItemTemplateProps> | null
 ) => UseArrayReturn = (props, AdditionalItemTemplate = null) => {
   const WidgetComponent = React.useContext(RenderSchemaContext);
 
-  const { schema, schemaPath, dataPath, next, onChange } = props;
+  const { schema, schemaPath, dataPath, onChange } = props;
   if (!schema || typeof schema === 'boolean' || typeof schema.items === 'boolean')
     return { onAdd: null, arrayBody: null };
   const data = props.data || Array.from(Array.isArray(schema.items) ? { length: schema.items!.length } : []);
@@ -145,18 +140,18 @@ export const useArray: (
   };
 };
 
-export const compose: (
-  widgets: React.ComponentType<FormWidgetPropsNext>[]
-) => React.ComponentType<FormWidgetPropsNext> = (widgets) => {
-  const Composed: React.FC<FormWidgetPropsNext> = ({ next, ...props }) => {
-    const dispatch: (props: FormWidgetProps, i: number) => React.ReactElement | null = (nextProps, i) => {
+export const compose: (widgets: React.ComponentType<MiddlewareProps>[]) => React.ComponentType<MiddlewareProps> = (
+  widgets
+) => {
+  const Composed: React.FC<MiddlewareProps> = (props) => {
+    const dispatch: (props: MiddlewareProps, i: number) => React.ReactElement | null = (nextProps, i) => {
       const Widget = widgets[i];
-      if (i >= widgets.length) return next ? next(nextProps) : null;
+      if (i >= widgets.length) return props.next ? props.next(nextProps) : null;
       return (
         <Widget
           {...{
             ...nextProps,
-            next: (props) => dispatch(props, i + 1),
+            next: (_props) => dispatch(_props, i + 1),
           }}
         />
       );
@@ -166,7 +161,7 @@ export const compose: (
   return Composed;
 };
 
-export const NotFoundWidget = ({ schemaPath }: FormWidgetPropsNext) => (
+export const NotFoundWidget = ({ schemaPath }: MiddlewareProps) => (
   <div>schema not supported, location {schemaPath.join('.')}</div>
 );
 
@@ -198,7 +193,7 @@ const Form: React.FC<FormProps> = (props) => {
 
 export default Form;
 
-export const isRequired = ({ parent, dataPath }: FormWidgetProps) =>
+export const isRequired = ({ parent, dataPath }: MiddlewareProps) =>
   !!parent &&
   typeof parent.schema !== 'boolean' &&
   parent.schema.required &&
