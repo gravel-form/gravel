@@ -1,5 +1,6 @@
 import React from 'react';
 import { JSONSchema7, JSONSchema7Definition } from 'json-schema';
+import Ajv from 'ajv';
 
 export interface FormProps {
   schema: JSONSchema7Definition;
@@ -11,8 +12,8 @@ export interface FormWidgetProps {
   parent: FormWidgetProps | null;
   data: any;
   onChange: Function;
-  schemaPath: string[];
-  dataPath: string[];
+  schemaPath: (string | number)[];
+  dataPath: (string | number)[];
 }
 
 export interface FormWidgetPropsNext extends FormWidgetProps {
@@ -91,8 +92,8 @@ export const useArray: (
           onChange={binItemUpdate(i)}
           schema={itemSchema}
           data={data[i]}
-          schemaPath={[...schemaPath, 'items', i.toString()]}
-          dataPath={[...dataPath, i.toString()]}
+          schemaPath={[...schemaPath, 'items', i]}
+          dataPath={[...dataPath, i]}
           parent={props}
           next={() => null}
         />
@@ -169,9 +170,15 @@ export const NotFoundWidget = ({ schemaPath }: FormWidgetPropsNext) => (
   <div>schema not supported, location {schemaPath.join('.')}</div>
 );
 
+const ajv = new Ajv();
+
 const Form: React.FC<FormProps> = (props) => {
   const WidgetComponent = React.useMemo(() => compose(props.widgets), [props.widgets]);
   const [data, setData] = React.useState({});
+  const errors = React.useMemo(() => {
+    ajv.validate(props.schema, data);
+    return ajv.errors;
+  }, [props.schema, data]);
   return (
     <RenderSchemaContext.Provider value={WidgetComponent}>
       <WidgetComponent
@@ -183,7 +190,8 @@ const Form: React.FC<FormProps> = (props) => {
         parent={null}
         next={() => null}
       />
-      {JSON.stringify(data)}
+      <div>{JSON.stringify(data)}</div>
+      <div>{JSON.stringify(errors)}</div>
     </RenderSchemaContext.Provider>
   );
 };
@@ -191,18 +199,18 @@ const Form: React.FC<FormProps> = (props) => {
 export default Form;
 
 export const isRequired = ({ parent, dataPath }: FormWidgetProps) =>
-  parent &&
+  !!parent &&
   typeof parent.schema !== 'boolean' &&
   parent.schema.required &&
-  parent.schema.required.includes(dataPath[dataPath.length - 1]);
+  parent.schema.required.includes(dataPath[dataPath.length - 1].toString());
 
 export const formSchema: JSONSchema7Definition = {
   type: 'object',
   required: ['foo'],
   title: 'Form',
   properties: {
-    foo: { type: 'string', description: 'foo bar baz' },
-    bar: { type: 'integer' },
+    foo: { type: 'string', description: 'foo bar baz', title: 'Foooo!' },
+    bar: { type: 'integer', enum: ['a', 'b', 'c'] },
     baz: {
       type: 'object',
       properties: {
