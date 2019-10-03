@@ -2,6 +2,9 @@ import React from 'react';
 import { JSONSchema7Definition } from 'json-schema';
 import Ajv from 'ajv';
 
+const noop = () => { };
+const Null = () => null;
+
 export interface FormProps {
   schema: JSONSchema7Definition;
   widgets: React.ComponentType<MiddlewareProps>[];
@@ -19,31 +22,54 @@ export interface MiddlewareProps {
 
 const RenderSchemaContext = React.createContext<React.ComponentType<MiddlewareProps>>(() => <div>'not provided'</div>);
 
-export const ObjectWidget = (props: MiddlewareProps) => {
-  const { schema, schemaPath, onChange, next } = props;
+const bindChildProps: (props: MiddlewareProps) => ((key: string | number) => MiddlewareProps) | null = (props) => {
+  const { schema, onChange, schemaPath, dataPath } = props;
   const data = props.data || {};
+  if (typeof schema === 'boolean') return null;
+  if (schema.type === 'object' && schema.properties) {
+    const properties = schema.properties;
+    return (key) => ({
+      schema: properties[key],
+      data: data[key],
+      onChange: (value: any) => onChange({ ...data, [key]: value }),
+      schemaPath: [...schemaPath, 'properties', key],
+      dataPath: [...dataPath, key],
+      parent: props,
+      next: Null,
+    });
+  } else if (schema.type === 'array' && Array.isArray(schema.items)) {
+    const items = schema.items;
+    return (key) => ({
+      schema: items[key as number],
+      data: data[key],
+      onChange: (value: any) => onChange([...data.slice(0, +key), value, ...data.slice(+key + 1)]),
+      schemaPath: [...schemaPath, 'items', key],
+      dataPath: [...dataPath, key],
+      parent: props,
+      next: Null,
+    });
+  }
+  return null;
+};
+
+export const FixedArrayObjectMiddleware = (props: MiddlewareProps) => {
   const WidgetComponent = React.useContext(RenderSchemaContext);
-  if (typeof schema === 'boolean' || !schema.properties) return next(props);
-  const properties = schema.properties;
+  const { schema, next } = props;
+  const getChildProps = bindChildProps(props);
+  if (!getChildProps) return next(props);
+  if (typeof schema === 'boolean') return next(props);
+  const children = schema.properties || schema.items;
+  if (!children) return next(props);
   return (
     <>
-      {Object.keys(properties).map((property) => (
-        <WidgetComponent
-          key={property}
-          schema={properties[property]}
-          data={data[property]}
-          onChange={(value: any) => onChange({ ...data, [property]: value })}
-          schemaPath={[...schemaPath, property]}
-          dataPath={[...schemaPath, property]}
-          parent={props}
-          next={() => null}
-        />
+      {Object.keys(children).map((key) => (
+        <WidgetComponent key={key} {...getChildProps(key)} />
       ))}
     </>
   );
 };
 
-export interface UseArrayReturn {
+export interface UseAdditional {
   onAdd: ((newData: any) => void) | null;
   arrayBody: React.ReactElement[] | null;
 }
@@ -52,10 +78,10 @@ export interface AdditionalItemTemplateProps extends MiddlewareProps {
   onMove: (newIndex: number) => void;
 }
 
-export const useArray: (
+export const useAdditional: (
   props: MiddlewareProps,
   AdditionalItemTemplate: React.ComponentType<AdditionalItemTemplateProps> | null
-) => UseArrayReturn = (props, AdditionalItemTemplate = null) => {
+) => UseAdditional = (props, AdditionalItemTemplate = null) => {
   const WidgetComponent = React.useContext(RenderSchemaContext);
 
   const { schema, schemaPath, dataPath, onChange } = props;
@@ -78,22 +104,9 @@ export const useArray: (
     }
   };
   let arrayBody: React.ReactElement[] = [];
+
   if (Array.isArray(schema.items)) {
     const items = schema.items;
-    arrayBody = items.map((itemSchema, i) => {
-      return (
-        <WidgetComponent
-          key={i}
-          onChange={binItemUpdate(i)}
-          schema={itemSchema}
-          data={data[i]}
-          schemaPath={[...schemaPath, 'items', i]}
-          dataPath={[...dataPath, i]}
-          parent={props}
-          next={() => null}
-        />
-      );
-    });
     if (schema.additionalItems && data.length > items.length && typeof schema.additionalItems !== 'boolean') {
       const additionalItemSchema = schema.additionalItems;
       for (let i = items.length; i < data.length; i += 1) {
@@ -110,7 +123,7 @@ export const useArray: (
               console.log(newIndex, data.length);
               if (newIndex < 0 || (newIndex >= items.length && newIndex < data.length)) onMove(i, newIndex);
             }}
-            next={(props) => <WidgetComponent {...props} next={() => null} />}
+            next={(props) => <WidgetComponent {...props} next={Null} />}
           />
         );
       }
@@ -129,7 +142,7 @@ export const useArray: (
         onMove={(newIndex) => {
           if (newIndex < data.length) onMove(i, newIndex);
         }}
-        next={(props) => <WidgetComponent {...props} next={() => null} />}
+        next={(props) => <WidgetComponent {...props} next={Null} />}
       />
     ));
   }
@@ -215,6 +228,7 @@ export const formSchema: JSONSchema7Definition = {
     qux: {
       type: 'array',
       title: 'array schema',
+      description: 'array description',
       items: { type: 'object', required: ['a2'], properties: { a1: { type: 'string' }, a2: { type: 'string' } } },
     },
     multipleChoicesList: {
