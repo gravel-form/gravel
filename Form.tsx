@@ -21,6 +21,7 @@ export interface MiddlewareProps {
 }
 
 const RenderSchemaContext = React.createContext<React.ComponentType<MiddlewareProps>>(() => <div>'not provided'</div>);
+export const ValidationErrorContext = React.createContext<Ajv.ErrorObject[] | null | undefined>(null);
 
 const bindChildProps: (props: MiddlewareProps) => ((key: string | number) => MiddlewareProps) | null = (props) => {
   const { schema, onChange, schemaPath, dataPath } = props;
@@ -136,8 +137,8 @@ export const useAdditional: (
         onChange={binItemUpdate(i)}
         schema={items}
         data={itemData}
-        schemaPath={[...schemaPath, 'items', i.toString()]}
-        dataPath={[...dataPath, 'items', i.toString()]}
+        schemaPath={[...schemaPath, 'items', i]}
+        dataPath={[...dataPath, i]}
         parent={props}
         onMove={(newIndex) => {
           if (newIndex < data.length) onMove(i, newIndex);
@@ -178,7 +179,16 @@ export const NotFoundWidget = ({ schemaPath }: MiddlewareProps) => (
   <div>schema not supported, location {schemaPath.join('.')}</div>
 );
 
-const ajv = new Ajv();
+const ajv = new Ajv({
+  errorDataPath: 'property',
+  allErrors: true,
+  multipleOfPrecision: 8,
+  schemaId: 'auto',
+  unknownFormats: 'ignore',
+});
+
+export const toJSONSchemaPath: (dataPath: (string | number)[]) => string = (dataPath) =>
+  dataPath.map((key) => (typeof key === 'number' ? `[${key}]` : '.' + key)).join('');
 
 const Form: React.FC<FormProps> = (props) => {
   const WidgetComponent = React.useMemo(() => compose(props.widgets), [props.widgets]);
@@ -189,35 +199,43 @@ const Form: React.FC<FormProps> = (props) => {
   }, [props.schema, data]);
   return (
     <RenderSchemaContext.Provider value={WidgetComponent}>
-      <WidgetComponent
-        schema={props.schema}
-        onChange={setData}
-        data={data}
-        schemaPath={[]}
-        dataPath={[]}
-        parent={null}
-        next={() => null}
-      />
-      <div>{JSON.stringify(data)}</div>
-      <div>{JSON.stringify(errors)}</div>
+      <ValidationErrorContext.Provider value={errors}>
+        <WidgetComponent
+          key={1}
+          schema={props.schema}
+          onChange={setData}
+          data={data}
+          schemaPath={[]}
+          dataPath={[]}
+          parent={null}
+          next={() => null}
+        />
+        <div>{JSON.stringify(data)}</div>
+      </ValidationErrorContext.Provider>
     </RenderSchemaContext.Provider>
   );
 };
 
 export default Form;
 
-export const isRequired = ({ parent, dataPath }: MiddlewareProps) =>
-  !!parent &&
-  typeof parent.schema !== 'boolean' &&
-  parent.schema.required &&
-  parent.schema.required.includes(dataPath[dataPath.length - 1].toString());
+export const isRequired = ({ parent, dataPath }: MiddlewareProps) => {
+  const field = dataPath[dataPath.length - 1];
+  return (
+    parent &&
+    typeof parent.schema !== 'boolean' &&
+    parent.schema.required &&
+    typeof field === 'string' &&
+    parent.schema.required.includes(field)
+  );
+};
 
 export const formSchema: JSONSchema7Definition = {
   type: 'object',
-  required: ['foo'],
+  required: ['foo', 'foo2', 'qux'],
   title: 'Form',
   properties: {
     foo: { type: 'string', description: 'foo bar baz', title: 'Foooo!' },
+    foo2: { type: 'number', description: 'foo bar baz', title: 'Foooo!' },
     bar: { type: 'integer', enum: ['a', 'b', 'c'] },
     baz: {
       type: 'object',
@@ -229,7 +247,7 @@ export const formSchema: JSONSchema7Definition = {
       type: 'array',
       title: 'array schema',
       description: 'array description',
-      items: { type: 'object', required: ['a2'], properties: { a1: { type: 'string' }, a2: { type: 'string' } } },
+      items: { type: 'object', required: ['a2'], properties: { a1: { type: 'number' }, a2: { type: 'string' } } },
     },
     multipleChoicesList: {
       type: 'array',

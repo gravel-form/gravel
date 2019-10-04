@@ -1,6 +1,6 @@
 import React from 'react';
 import Form, { FormProps, formSchema } from './Form';
-import widgets from '../theme-bootstrap3';
+import widgets from '../theme-bootstrap4';
 
 const formProps: FormProps = {
   schema: formSchema,
