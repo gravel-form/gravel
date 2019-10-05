@@ -1,13 +1,14 @@
 import React from 'react';
 import { JSONSchema7Definition } from 'json-schema';
-import Ajv from 'ajv';
 
 const noop = () => { };
 const Null = () => null;
 
 export interface FormProps {
   schema: JSONSchema7Definition;
-  widgets: React.ComponentType<MiddlewareProps>[];
+  middlewares: React.ComponentType<MiddlewareProps>[];
+  data?: any;
+  onChange?: (data: any) => void;
 }
 
 export interface MiddlewareProps {
@@ -21,7 +22,6 @@ export interface MiddlewareProps {
 }
 
 const RenderSchemaContext = React.createContext<React.ComponentType<MiddlewareProps>>(Null);
-export const ValidationErrorContext = React.createContext<Ajv.ErrorObject[] | null | undefined>(null);
 
 const bindChildProps: (props: MiddlewareProps) => ((key: string | number) => MiddlewareProps) | null = (props) => {
   const { schema, onChange, schemaPath, dataPath } = props;
@@ -161,44 +161,8 @@ export const NotFoundWidget = ({ schemaPath }: MiddlewareProps) => (
   <div>schema not supported, location {schemaPath.join('.')}</div>
 );
 
-const ajv = new Ajv({
-  errorDataPath: 'property',
-  allErrors: true,
-  multipleOfPrecision: 8,
-  schemaId: 'auto',
-  unknownFormats: 'ignore',
-});
-
 export const toJSONSchemaPath: (dataPath: (string | number)[]) => string = (dataPath) =>
   dataPath.map((key) => (typeof key === 'number' ? `[${key}]` : '.' + key)).join('');
-
-const Form: React.FC<FormProps> = (props) => {
-  const WidgetComponent = React.useMemo(() => compose(props.widgets), [props.widgets]);
-  const [data, setData] = React.useState({});
-  const errors = React.useMemo(() => {
-    ajv.validate(props.schema, data);
-    return ajv.errors;
-  }, [props.schema, data]);
-  return (
-    <RenderSchemaContext.Provider value={WidgetComponent}>
-      <ValidationErrorContext.Provider value={errors}>
-        <WidgetComponent
-          key={1}
-          schema={props.schema}
-          onChange={setData}
-          data={data}
-          schemaPath={[]}
-          dataPath={[]}
-          parent={null}
-          next={() => null}
-        />
-        <div>{JSON.stringify(data)}</div>
-      </ValidationErrorContext.Provider>
-    </RenderSchemaContext.Provider>
-  );
-};
-
-export default Form;
 
 export const isRequired = ({ parent, dataPath }: MiddlewareProps) => {
   const field = dataPath[dataPath.length - 1];
@@ -211,34 +175,20 @@ export const isRequired = ({ parent, dataPath }: MiddlewareProps) => {
   );
 };
 
-export const formSchema: JSONSchema7Definition = {
-  type: 'object',
-  required: ['foo', 'foo2', 'qux'],
-  title: 'Form',
-  properties: {
-    foo: { type: 'string', description: 'foo bar baz', title: 'Foooo!' },
-    foo2: { type: 'number', description: 'foo bar baz', title: 'Foooo!' },
-    bar: { type: 'integer', enum: ['a', 'b', 'c'] },
-    baz: {
-      type: 'object',
-      properties: {
-        qux: { type: 'string' },
-      },
-    },
-    qux: {
-      type: 'array',
-      title: 'array schema',
-      description: 'array description',
-      items: { type: 'object', required: ['a2'], properties: { a1: { type: 'number' }, a2: { type: 'string' } } },
-    },
-    multipleChoicesList: {
-      type: 'array',
-      title: 'A multiple choices list',
-      items: {
-        type: 'string',
-        enum: ['foo', 'bar', 'fuzz', 'qux'],
-      },
-      uniqueItems: true,
-    },
-  },
+export const FormCore: React.FC<FormProps> = ({ schema, data, middlewares, onChange }) => {
+  const WidgetComponent = React.useMemo(() => compose(middlewares), [middlewares]);
+  return (
+    <RenderSchemaContext.Provider value={WidgetComponent}>
+      <WidgetComponent
+        schema={schema}
+        onChange={onChange || noop}
+        data={data}
+        schemaPath={[]}
+        dataPath={[]}
+        parent={null}
+        next={() => null}
+      />
+    </RenderSchemaContext.Provider>
+  );
 };
+export default FormCore;
