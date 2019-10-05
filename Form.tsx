@@ -20,7 +20,7 @@ export interface MiddlewareProps {
   next: (props: MiddlewareProps) => React.ReactElement | null;
 }
 
-const RenderSchemaContext = React.createContext<React.ComponentType<MiddlewareProps>>(() => <div>'not provided'</div>);
+const RenderSchemaContext = React.createContext<React.ComponentType<MiddlewareProps>>(Null);
 export const ValidationErrorContext = React.createContext<Ajv.ErrorObject[] | null | undefined>(null);
 
 const bindChildProps: (props: MiddlewareProps) => ((key: string | number) => MiddlewareProps) | null = (props) => {
@@ -53,7 +53,7 @@ const bindChildProps: (props: MiddlewareProps) => ((key: string | number) => Mid
   return null;
 };
 
-export const FixedArrayObjectMiddleware = (props: MiddlewareProps) => {
+export const FixedArrayObjectMiddleware: React.FC<MiddlewareProps> = (props) => {
   const WidgetComponent = React.useContext(RenderSchemaContext);
   const { schema, next } = props;
   const getChildProps = bindChildProps(props);
@@ -104,52 +104,34 @@ export const useAdditional: (
       onChange([...data.slice(0, to), data[from], ...data.slice(to, from), ...data.slice(from + 1)]);
     }
   };
-  let arrayBody: React.ReactElement[] = [];
 
-  if (Array.isArray(schema.items)) {
-    const items = schema.items;
-    if (schema.additionalItems && data.length > items.length && typeof schema.additionalItems !== 'boolean') {
-      const additionalItemSchema = schema.additionalItems;
-      for (let i = items.length; i < data.length; i += 1) {
-        arrayBody.push(
-          <AdditionalItemComponent
-            key={i}
-            onChange={binItemUpdate(i)}
-            schema={additionalItemSchema}
-            data={data[i]}
-            schemaPath={[...schemaPath, 'items', i.toString()]}
-            dataPath={[...dataPath, i.toString()]}
-            parent={props}
-            onMove={(newIndex) => {
-              console.log(newIndex, data.length);
-              if (newIndex < 0 || (newIndex >= items.length && newIndex < data.length)) onMove(i, newIndex);
-            }}
-            next={(props) => <WidgetComponent {...props} next={Null} />}
-          />
-        );
-      }
-    }
-  } else if (schema.items && Array.isArray(data)) {
-    const items = schema.items;
-    arrayBody = data.map((itemData, i) => (
+  const [itemSchema, minIndex] = Array.isArray(schema.items)
+    ? [schema.additionalItems, schema.items.length]
+    : [schema.items, 0];
+  if (!itemSchema) return { onAdd: null, arrayBody: null };
+
+  let arrayBody: React.ReactElement[] = [];
+  for (let i = minIndex; i < data.length; i += 1) {
+    arrayBody.push(
       <AdditionalItemComponent
         key={i}
         onChange={binItemUpdate(i)}
-        schema={items}
-        data={itemData}
+        schema={itemSchema}
+        data={data[i]}
         schemaPath={[...schemaPath, 'items', i]}
         dataPath={[...dataPath, i]}
         parent={props}
         onMove={(newIndex) => {
-          if (newIndex < data.length) onMove(i, newIndex);
+          console.log(i, newIndex, data.length);
+          if (newIndex < 0 || (newIndex >= minIndex && newIndex < data.length)) onMove(i, newIndex);
         }}
         next={(props) => <WidgetComponent {...props} next={Null} />}
       />
-    ));
+    );
   }
 
   return {
-    onAdd: (Array.isArray(schema.items) ? !!schema.additionalItems : !!schema.items) ? onAdd : null,
+    onAdd,
     arrayBody,
   };
 };
