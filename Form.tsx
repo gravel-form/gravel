@@ -53,7 +53,7 @@ const bindChildProps: (props: MiddlewareProps) => ((key: string | number) => Mid
   return null;
 };
 
-export const FixedArrayObjectMiddleware: React.FC<MiddlewareProps> = (props) => {
+export const FixedObjectArrayMiddleware: React.FC<MiddlewareProps> = (props) => {
   const WidgetComponent = React.useContext(RenderSchemaContext);
   const { schema, next } = props;
   const getChildProps = bindChildProps(props);
