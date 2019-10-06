@@ -1,0 +1,23 @@
+{
+  "name": "@gravel-form/core",
+  "version": "0.0.1",
+  "main": "lib/index.js",
+  "peerDependencies": {
+    "react": ">=16.8"
+  },
+  "dependencies": {
+    "@types/json-schema": "^7.0.3"
+  },
+  "devDependencies": {
+    "gulp": "^4.0.2",
+    "gulp-sourcemaps": "^2.6.5",
+    "gulp-typescript": "^5.0.1",
+    "husky": "^3.0.7",
+    "prettier": "^1.18.2",
+    "pretty-quick": "^1.11.1",
+    "through2": "^3.0.1"
+  },
+  "husky": {
+    "pre-commit": "pretty-quick --staged"
+  }
+}
