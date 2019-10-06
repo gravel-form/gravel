@@ -1,29 +1,29 @@
 import React from 'react';
 import { JSONSchema7Definition } from 'json-schema';
+import compose, { MiddlewareProps } from './compose';
 
 const noop = () => { };
 const Null = () => null;
 
 export interface FormProps {
   schema: JSONSchema7Definition;
-  middlewares: React.ComponentType<MiddlewareProps>[];
+  middlewares: React.ComponentType<FormMiddlewareProps>[];
   data?: any;
   onChange?: (data: any) => void;
 }
 
-export interface MiddlewareProps {
+export interface FormMiddlewareProps extends MiddlewareProps {
   schema: JSONSchema7Definition;
-  parent: MiddlewareProps | null;
+  parent: FormMiddlewareProps | null;
   data: any;
   onChange: Function;
   schemaPath: (string | number)[];
   dataPath: (string | number)[];
-  next: (props: MiddlewareProps) => React.ReactElement | null;
 }
 
-const RenderSchemaContext = React.createContext<React.ComponentType<MiddlewareProps>>(Null);
+const RenderSchemaContext = React.createContext<React.ComponentType<FormMiddlewareProps>>(Null);
 
-const bindChildProps: (props: MiddlewareProps) => ((key: string | number) => MiddlewareProps) | null = (props) => {
+export function bindChildProps(props: FormMiddlewareProps): ((key: string | number) => FormMiddlewareProps) | null {
   const { schema, onChange, schemaPath, dataPath } = props;
   const data = props.data || {};
   if (typeof schema === 'boolean') return null;
@@ -51,38 +51,21 @@ const bindChildProps: (props: MiddlewareProps) => ((key: string | number) => Mid
     });
   }
   return null;
-};
-
-export const FixedObjectArrayMiddleware: React.FC<MiddlewareProps> = (props) => {
-  const WidgetComponent = React.useContext(RenderSchemaContext);
-  const { schema, next } = props;
-  const getChildProps = bindChildProps(props);
-  if (!getChildProps) return next(props);
-  if (typeof schema === 'boolean') return next(props);
-  const children = schema.properties || schema.items;
-  if (!children) return next(props);
-  return (
-    <>
-      {Object.keys(children).map((key) => (
-        <WidgetComponent key={key} {...getChildProps(key)} />
-      ))}
-    </>
-  );
-};
+}
 
 export interface UseAdditional {
   onAdd: ((newData: any) => void) | null;
   arrayBody: React.ReactElement[] | null;
 }
 
-export interface AdditionalItemTemplateProps extends MiddlewareProps {
+export interface AdditionalItemTemplateProps extends FormMiddlewareProps {
   onMove: (newIndex: number) => void;
 }
 
-export const useAdditional: (
-  props: MiddlewareProps,
+export function useAdditional(
+  props: FormMiddlewareProps,
   AdditionalItemTemplate: React.ComponentType<AdditionalItemTemplateProps> | null
-) => UseAdditional = (props, AdditionalItemTemplate = null) => {
+): UseAdditional {
   const WidgetComponent = React.useContext(RenderSchemaContext);
 
   const { schema, schemaPath, dataPath, onChange } = props;
@@ -106,9 +89,10 @@ export const useAdditional: (
     : [schema.items, 0];
   if (!itemSchema) return { onAdd: null, arrayBody: null };
 
-  const childNext = (props: MiddlewareProps) => <WidgetComponent {...props} next={Null} />;
+  const childNext = (props: FormMiddlewareProps) => <WidgetComponent {...props} next={Null} />;
 
-  const bindChildProps: (i: number) => MiddlewareProps = (i) => ({
+  const bindChildProps: (i: number) => FormMiddlewareProps = (i) => ({
+    ...props,
     onChange: (value: any) => {
       onChange([...data.slice(0, i), value, ...data.slice(i + 1)]);
     },
@@ -117,7 +101,6 @@ export const useAdditional: (
     schemaPath: [...schemaPath, 'items', i],
     dataPath: [...dataPath, i],
     parent: props,
-    next: childNext,
   });
 
   let arrayBody: React.ReactElement[] = [];
@@ -132,9 +115,10 @@ export const useAdditional: (
               onMove(i, newIndex);
             }
           }}
+          next={childNext}
         />
       ) : (
-          <WidgetComponent key={i} {...bindChildProps(i)} />
+          <WidgetComponent key={i} {...bindChildProps(i)} next={childNext} />
         )
     );
   }
@@ -143,52 +127,45 @@ export const useAdditional: (
     onAdd,
     arrayBody,
   };
-};
+}
 
-export const compose: (widgets: React.ComponentType<MiddlewareProps>[]) => React.ComponentType<MiddlewareProps> = (
-  widgets
-) => {
-  const Composed: React.FC<MiddlewareProps> = (props) => {
-    const dispatch: (props: MiddlewareProps, i: number) => React.ReactElement | null = (nextProps, i) => {
-      const Widget = widgets[i];
-      if (i >= widgets.length) return props.next ? props.next(nextProps) : null;
-      return (
-        <Widget
-          {...{
-            ...nextProps,
-            next: (_props) => dispatch(_props, i + 1),
-          }}
-        />
-      );
-    };
-    return dispatch(props, 0);
-  };
-  return Composed;
-};
+export function toJSONSchemaPath(dataPath: (string | number)[]): string {
+  return dataPath.map((key) => (typeof key === 'number' ? `[${key}]` : '.' + key)).join('');
+}
 
-export const NotFoundWidget = ({ schemaPath }: MiddlewareProps) => (
-  <div>schema not supported, location {schemaPath.join('.')}</div>
-);
-
-export const toJSONSchemaPath: (dataPath: (string | number)[]) => string = (dataPath) =>
-  dataPath.map((key) => (typeof key === 'number' ? `[${key}]` : '.' + key)).join('');
-
-export const isRequired = ({ parent, dataPath }: MiddlewareProps) => {
+export function isRequired({ parent, dataPath }: FormMiddlewareProps): boolean {
   const field = dataPath[dataPath.length - 1];
-  return (
+  return !!(
     parent &&
     typeof parent.schema !== 'boolean' &&
     parent.schema.required &&
     typeof field === 'string' &&
     parent.schema.required.includes(field)
   );
+}
+
+export const FixedObjectArrayMiddleware: React.FC<FormMiddlewareProps> = (props) => {
+  const WidgetComponent = React.useContext(RenderSchemaContext);
+  const { schema, next } = props;
+  const getChildProps = bindChildProps(props);
+  if (!getChildProps) return next(props);
+  if (typeof schema === 'boolean') return next(props);
+  const children = schema.properties || schema.items;
+  if (!children) return next(props);
+  return (
+    <>
+      {Object.keys(children).map((key) => (
+        <WidgetComponent key={key} {...getChildProps(key)} />
+      ))}
+    </>
+  );
 };
 
 export const FormCore: React.FC<FormProps> = ({ schema, data, middlewares, onChange }) => {
-  const WidgetComponent = React.useMemo(() => compose(middlewares), [middlewares]);
+  const ComposedComponent = React.useMemo(() => compose(middlewares), [middlewares]);
   return (
-    <RenderSchemaContext.Provider value={WidgetComponent}>
-      <WidgetComponent
+    <RenderSchemaContext.Provider value={ComposedComponent}>
+      <ComposedComponent
         schema={schema}
         onChange={onChange || noop}
         data={data}
@@ -200,4 +177,5 @@ export const FormCore: React.FC<FormProps> = ({ schema, data, middlewares, onCha
     </RenderSchemaContext.Provider>
   );
 };
+
 export default FormCore;
