@@ -1,6 +1,10 @@
 {
   "name": "@gravel-form/core",
   "version": "0.0.1",
+  "license": "MIT",
+  "files": [
+    "lib"
+  ],
   "main": "lib/index.js",
   "peerDependencies": {
     "react": ">=16.8"
@@ -9,13 +13,19 @@
     "@types/json-schema": "^7.0.3"
   },
   "devDependencies": {
+    "@types/react": "^16.9.5",
     "gulp": "^4.0.2",
     "gulp-sourcemaps": "^2.6.5",
     "gulp-typescript": "^5.0.1",
     "husky": "^3.0.7",
+    "merge-stream": "^2.0.0",
     "prettier": "^1.18.2",
     "pretty-quick": "^1.11.1",
-    "through2": "^3.0.1"
+    "through2": "^3.0.1",
+    "typescript": "^3.6.3"
+  },
+  "scripts": {
+    "compile": "gulp compile"
   },
   "husky": {
     "pre-commit": "pretty-quick --staged"
