@@ -2,7 +2,7 @@ import React from 'react';
 import { JSONSchema7Definition } from 'json-schema';
 import compose, { MiddlewareProps } from './compose';
 
-export interface FormMiddlewareProps extends MiddlewareProps {
+export interface FormMiddlewareProps<FP = {}> extends MiddlewareProps {
   schema: JSONSchema7Definition;
   parent: FormMiddlewareProps | null;
   data: any;
@@ -10,6 +10,7 @@ export interface FormMiddlewareProps extends MiddlewareProps {
   schemaPath: (string | number)[];
   dataPath: (string | number)[];
   MiddlewareComponent: React.ComponentType<FormMiddlewareProps>;
+  formProps: FormProps & FP;
 }
 
 export interface UseAdditional {
@@ -93,9 +94,7 @@ export function useAdditional(
 
   const bindChildProps: (i: number) => FormMiddlewareProps = (i) => ({
     ...props,
-    onChange: (value: any) => {
-      onChange([...data.slice(0, i), value, ...data.slice(i + 1)]);
-    },
+    onChange: (value: any) => onChange([...data.slice(0, i), value, ...data.slice(i + 1)]),
     schema: itemSchema,
     data: data[i],
     schemaPath: [...schemaPath, 'items', i],
@@ -160,13 +159,14 @@ export const FixedObjectArrayMiddleware: React.FC<FormMiddlewareProps> = (props)
   );
 };
 
-export const FormCore: React.FC<FormProps> = ({ data, middlewares, onChange, ...rest }) => {
+export const FormCore: React.FC<FormProps> = (props) => {
+  const { schema, data, middlewares, onChange, ...rest } = props;
   const Composed = React.useMemo(() => (Array.isArray(middlewares) ? compose(middlewares) : middlewares), [
     middlewares,
   ]);
   return (
     <Composed
-      {...rest}
+      schema={schema}
       onChange={onChange || noop}
       data={data}
       schemaPath={[]}
@@ -174,6 +174,7 @@ export const FormCore: React.FC<FormProps> = ({ data, middlewares, onChange, ...
       parent={null}
       next={Null}
       MiddlewareComponent={Composed}
+      formProps={props}
     />
   );
 };
