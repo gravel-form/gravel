@@ -1,7 +1,7 @@
 import React from 'react';
 import { JSONSchema7Definition } from 'json-schema';
 import { MiddlewareProps } from './compose';
-export interface FormMiddlewareProps extends MiddlewareProps {
+export interface FormMiddlewareProps<FP = {}> extends MiddlewareProps {
     schema: JSONSchema7Definition;
     parent: FormMiddlewareProps | null;
     data: any;
@@ -9,6 +9,7 @@ export interface FormMiddlewareProps extends MiddlewareProps {
     schemaPath: (string | number)[];
     dataPath: (string | number)[];
     MiddlewareComponent: React.ComponentType<FormMiddlewareProps>;
+    formProps: FormProps & FP;
 }
 export interface UseAdditional {
     onAdd: ((newData: any) => void) | null;
@@ -27,6 +28,6 @@ export declare function bindChildProps(props: FormMiddlewareProps): ((key: strin
 export declare function useAdditional(props: FormMiddlewareProps, AdditionalItemTemplate: React.ComponentType<AdditionalItemTemplateProps> | null): UseAdditional;
 export declare function toJSONSchemaPath(dataPath: (string | number)[]): string;
 export declare function isRequired({ parent, dataPath }: FormMiddlewareProps): boolean;
-export declare const FixedObjectArrayMiddleware: React.FC<FormMiddlewareProps>;
+export declare const FixedObjectArrayMw: React.FC<FormMiddlewareProps>;
 export declare const FormCore: React.FC<FormProps>;
 export default FormCore;
