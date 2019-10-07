@@ -143,7 +143,7 @@ export function isRequired({ parent, dataPath }: FormMiddlewareProps): boolean {
   );
 }
 
-export const FixedObjectArrayMiddleware: React.FC<FormMiddlewareProps> = (props) => {
+export const FixedObjectArrayMw: React.FC<FormMiddlewareProps> = (props) => {
   const { schema, next, MiddlewareComponent } = props;
   const getChildProps = bindChildProps(props);
   if (!getChildProps) return next(props);
