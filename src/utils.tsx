@@ -160,7 +160,7 @@ export const FixedObjectArrayMw: React.FC<FormMiddlewareProps> = (props) => {
 };
 
 export const FormCore: React.FC<FormProps> = (props) => {
-  const { schema, data, middlewares, onChange, ...rest } = props;
+  const { schema, data, middlewares, onChange } = props;
   const Composed = React.useMemo(() => (Array.isArray(middlewares) ? compose(middlewares) : middlewares), [
     middlewares,
   ]);
