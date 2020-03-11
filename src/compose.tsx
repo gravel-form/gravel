@@ -4,7 +4,7 @@ export interface MiddlewareProps {
   next: (props: any) => React.ReactElement | null;
 }
 
-export default function compose<P extends MiddlewareProps>(widgets: React.ComponentType<P>[]): React.ComponentType<P> {
+export default function compose<P extends MiddlewareProps>(widgets: React.ComponentType<P>[]): React.FC<P> {
   const Composed: React.FC<P> = (props) => {
     const dispatch: (nextProp: P, i: number) => React.ReactElement | null = (nextProps, i) => {
       const Widget = widgets[i];
