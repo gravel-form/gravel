@@ -49,6 +49,7 @@ export const FixedObjectMw: React.FC<FormMiddlewareProps> = (props) => {
     <>
       {Object.keys(properties).map((key) => (
         <MiddlewareComponent
+          key={key}
           {...props}
           schema={properties[key]}
           data={Object.hasOwnProperty.call(data, key) ? data[key] : undefined}
@@ -74,6 +75,7 @@ export const FixedArrayMw: React.FC<FormMiddlewareProps> = (props) => {
     <>
       {items.map((item, index) => (
         <MiddlewareComponent
+          key={index}
           {...props}
           schema={items[index]}
           data={item}
