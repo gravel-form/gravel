@@ -10,6 +10,7 @@
     "noImplicitAny": true,
     "target": "es5",
     "declaration": true,
+    "downlevelIteration":true,
     "lib": ["dom", "es2017"]
   },
   "exclude": ["node_modules", "lib", "es"]
