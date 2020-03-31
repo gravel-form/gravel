@@ -10,19 +10,19 @@
     "react": ">=16.8"
   },
   "dependencies": {
-    "@types/json-schema": "^7.0.3"
+    "@types/json-schema": "^7.0.4"
   },
   "devDependencies": {
-    "@types/react": "^16.9.5",
+    "@types/react": "^16.9.29",
     "gulp": "^4.0.2",
     "gulp-sourcemaps": "^2.6.5",
-    "gulp-typescript": "^5.0.1",
-    "husky": "^3.0.7",
+    "gulp-typescript": "^6.0.0-alpha.1",
+    "husky": "^4.2.3",
     "merge-stream": "^2.0.0",
-    "prettier": "^1.18.2",
-    "pretty-quick": "^1.11.1",
+    "prettier": "^2.0.2",
+    "pretty-quick": "^2.0.1",
     "through2": "^3.0.1",
-    "typescript": "^3.6.3"
+    "typescript": "^3.8.3"
   },
   "scripts": {
     "compile": "gulp compile"
