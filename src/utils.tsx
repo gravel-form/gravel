@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { JSONSchema7Definition, JSONSchema7 } from 'json-schema';
 import compose, { MiddlewareProps } from './compose';
 import { traverse, getSchemaByPointer } from './json-schema-traverse';
@@ -141,8 +141,6 @@ export const LocalRefMw: React.FC<FormMiddlewareProps> = (props) => {
   if (typeof schema === 'boolean' || !schema.$ref || !schema.$ref.startsWith('#')) return next(nextProps);
 
   const child = schema.$ref ? resolveSchemaRef(formProps.schema, refs, schema.$ref) : null;
-  //console.log(child);
-  //return next(nextProps);
 
   if (!child || child.schema === schema) return next(nextProps);
 
@@ -153,6 +151,7 @@ export const schemaMws = [FixedObjectMw, FixedArrayMw, LocalRefMw];
 
 export const FormCore: React.FC<FormProps> = (props) => {
   const { schema, data, middlewares, onChange } = props;
+  if (!middlewares || !schema) return null;
   const Composed = React.useMemo(() => (Array.isArray(middlewares) ? compose(middlewares) : middlewares), [
     middlewares,
   ]);
