@@ -2,9 +2,10 @@ const path = require('path');
 const gulp = require('gulp');
 const through2 = require('through2');
 const ts = require('gulp-typescript');
+const sourcemaps = require('gulp-sourcemaps');
+const merge = require('merge-stream');
+
 const tsConfig = require('./tsconfig.json').compilerOptions;
-var sourcemaps = require('gulp-sourcemaps');
-var merge = require('merge-stream');
 
 const tsFiles = ['src/**/*.{ts,tsx}'];
 

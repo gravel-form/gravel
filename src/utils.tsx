@@ -97,18 +97,6 @@ export const FixedArrayMw: React.FC<FormMiddlewareProps> = (props) => {
   );
 };
 
-function get(obj: any, path: string[]): unknown {
-  let _obj = obj;
-  for (const key of path) {
-    if (_obj && Object.prototype.hasOwnProperty.call(_obj, key)) {
-      _obj = _obj[key];
-    } else {
-      return _obj;
-    }
-  }
-  return _obj;
-}
-
 function resolveSchemaRef(
   rootSchema: JSONSchema7,
   refs: { [key: string]: SchemaLocalRef },
