@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { JSONSchema7Definition, JSONSchema7 } from 'json-schema';
 import { MiddlewareProps } from './compose';
 interface SchemaLocalRef {
