@@ -1,13 +1,28 @@
 {
   "name": "@gravel-form/core-rc",
   "version": "0.0.1",
+  "description": "A middleware framework for react json schema form",
+  "keywords": [
+    "form",
+    "json",
+    "json-schema",
+    "react",
+    "shema"
+  ],
+  "bugs": {
+    "url": "https://github.com/gravel-form/gravel/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gravel-form/gravel"
+  },
   "license": "MIT",
   "files": [
     "lib"
   ],
   "main": "lib/index.js",
   "peerDependencies": {
-    "react": ">=16.8"
+    "react": ">=16.8.0"
   },
   "dependencies": {
     "@types/json-schema": "^7.0.4"
