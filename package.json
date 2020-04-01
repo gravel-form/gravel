@@ -28,7 +28,7 @@
     "@types/json-schema": "^7.0.4"
   },
   "devDependencies": {
-    "@types/react": "^16.9.29",
+    "@types/react": "^16.9.31",
     "gulp": "^4.0.2",
     "gulp-sourcemaps": "^2.6.5",
     "gulp-typescript": "^6.0.0-alpha.1",
