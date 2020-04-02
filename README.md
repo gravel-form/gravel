@@ -2,8 +2,8 @@
 Middleware framework for react jsonschema form
 
 ## Installation
-```
-$ npm install git@github.com:gravel-form/gravel.git
+```bash
+npm install @gravel-form/core-rc
 ```
 
 ## Build a jsonschema form from scratch
@@ -11,7 +11,7 @@ $ npm install git@github.com:gravel-form/gravel.git
 ```bash
 npx create-react-app my-form
 cd my-form
-npm install git@github.com:gravel-form/gravel.git ajv
+npm install @gravel-form/core-rc ajv
 ```
 
 ``` jsx

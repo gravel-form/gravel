@@ -147,8 +147,6 @@ export const LocalRefMw: React.FC<FormMiddlewareProps> = (props) => {
   return <MiddlewareComponent {...nextProps} schema={child.schema} schemaPath={child.path} />;
 };
 
-export const schemaMws = [FixedObjectMw, FixedArrayMw, LocalRefMw];
-
 export const FormCore: React.FC<FormProps> = (props) => {
   const { schema, data, middlewares, onChange } = props;
   if (!middlewares || !schema) return null;
