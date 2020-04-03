@@ -1,6 +1,6 @@
 {
   "name": "@gravel-form/core-rc",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A middleware framework for react json schema form",
   "keywords": [
     "form",
