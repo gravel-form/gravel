@@ -1,11 +1,26 @@
 import * as React from 'react';
 import { JSONSchema7Definition, JSONSchema7 } from 'json-schema';
-import compose, { MiddlewareProps } from './compose';
+import { compose, Middleware } from './compose';
 import { traverse, getSchemaByPointer } from './json-schema-traverse';
 
 interface SchemaLocalRef {
   schema: JSONSchema7Definition;
   path: (string | number)[];
+}
+
+export interface MiddlewareProps {
+  next: (props: any) => React.ReactElement | null;
+}
+
+export function adapter<P extends MiddlewareProps>(
+  Middleware: React.ComponentType<P>
+): Middleware<Parameters<React.FC<P>>, ReturnType<React.FC<P>>> {
+  return (next, props) => React.createElement(Middleware, { ...props, next });
+}
+
+export function composeRC<P extends MiddlewareProps>(middlewares: React.ComponentType<P>[]): React.FC<P> {
+  const composed = compose(middlewares.map(adapter));
+  return (props: P) => composed(props.next, props);
 }
 
 export interface FormMiddlewareProps<FP = {}> extends MiddlewareProps {
@@ -151,7 +166,7 @@ export const LocalRefMw: React.FC<FormMiddlewareProps> = (props) => {
 export const FormCore: React.FC<FormProps> = (props) => {
   const { schema, data, middlewares, onChange } = props;
   if (!middlewares || !schema) return null;
-  const Composed = React.useMemo(() => (Array.isArray(middlewares) ? compose(middlewares) : middlewares), [
+  const Composed = React.useMemo(() => (Array.isArray(middlewares) ? composeRC(middlewares) : middlewares), [
     middlewares,
   ]);
   return (
