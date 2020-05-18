@@ -48,10 +48,11 @@ export function isRequired({ parent, dataPath }: FormMiddlewareProps): boolean {
 
 export const FixedObjectMw: React.FC<FormMiddlewareProps> = (props) => {
   const { schema, schemaPath, dataPath, onChange, MiddlewareComponent, next } = props;
-  if (typeof schema === 'boolean' || schema.type !== 'object') return next(props);
+  if (typeof schema === 'boolean' || (schema.type && schema.type !== 'object') || !schema.properties)
+    return next(props);
   const data: any = (typeof props.data === 'object' && props.data) || {};
   const properties = schema.properties;
-  if (!properties) return next(props);
+
   return (
     <>
       {Object.keys(properties).map((key) => (
@@ -73,7 +74,7 @@ export const FixedObjectMw: React.FC<FormMiddlewareProps> = (props) => {
 
 export const FixedArrayMw: React.FC<FormMiddlewareProps> = (props) => {
   const { schema, schemaPath, dataPath, onChange, MiddlewareComponent, next } = props;
-  if (typeof schema === 'boolean' || schema.type !== 'array' || !schema.items || !Array.isArray(schema.items))
+  if (typeof schema === 'boolean' || (schema.type && schema.type !== 'array') || !Array.isArray(schema.items))
     return next(props);
   const data: unknown[] = (Array.isArray(props.data) && props.data) || [];
   const items = schema.items;

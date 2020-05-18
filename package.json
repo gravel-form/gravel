@@ -36,11 +36,13 @@
     "merge-stream": "^2.0.0",
     "prettier": "^2.0.2",
     "pretty-quick": "^2.0.1",
+    "rimraf": "^3.0.2",
     "through2": "^3.0.1",
     "typescript": "^3.8.3"
   },
   "scripts": {
-    "compile": "gulp compile"
+    "compile": "gulp compile",
+    "npm-publish": "rimraf lib && npm run compile && npm publish --access public"
   },
   "husky": {
     "pre-commit": "pretty-quick --staged"
