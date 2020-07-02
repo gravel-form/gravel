@@ -37,8 +37,8 @@
     "prettier": "^2.0.5",
     "pretty-quick": "^2.0.1",
     "rimraf": "^3.0.2",
-    "through2": "^4.0.1",
-    "typescript": "^3.9.5"
+    "through2": "^4.0.2",
+    "typescript": "^3.9.6"
   },
   "scripts": {
     "compile": "gulp compile",
