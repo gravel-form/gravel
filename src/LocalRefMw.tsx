@@ -1,7 +1,12 @@
 import * as React from 'react';
-import { JSONSchema7 } from 'json-schema';
-import { FormMiddlewareProps, SchemaLocalRef } from './types';
+import { JSONSchema7Definition, JSONSchema7 } from 'json-schema';
+import { MiddlewareProps } from './types';
 import { traverse, getSchemaByPointer } from './json-schema-traverse';
+
+export interface SchemaLocalRef {
+  schema: JSONSchema7Definition;
+  path: (string | number)[];
+}
 
 function resolveSchemaRef(
   rootSchema: JSONSchema7,
@@ -29,7 +34,7 @@ function resolveSchemaRef(
   return null;
 }
 
-export const LocalRefMw: React.FC<FormMiddlewareProps> = (props) => {
+export const LocalRefMw: React.FC<MiddlewareProps & { localRefs?: { [key: string]: SchemaLocalRef } }> = (props) => {
   const { schema, formProps, next, MiddlewareComponent, localRefs } = props;
 
   const refs: { [key: string]: SchemaLocalRef } = React.useMemo(() => {

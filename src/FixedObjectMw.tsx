@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { FormMiddlewareProps } from './types';
+import { MiddlewareProps } from './types';
 import { Null } from './utils';
 
-export const FixedObjectMw: React.FC<FormMiddlewareProps> = (props) => {
+export const FixedObjectMw: React.FC<MiddlewareProps> = (props) => {
   const { schema, schemaPath, dataPath, onChange, MiddlewareComponent, next } = props;
   if (typeof schema === 'boolean' || (schema.type && schema.type !== 'object') || !schema.properties)
     return next(props);

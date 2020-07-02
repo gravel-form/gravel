@@ -1,29 +1,23 @@
 import { JSONSchema7Definition, JSONSchema7 } from 'json-schema';
 
-export interface SchemaLocalRef {
-  schema: JSONSchema7Definition;
-  path: (string | number)[];
-}
-
-export interface MiddlewareProps {
+export interface GenericMiddlewareProps {
   next: (props: any) => React.ReactElement | null;
 }
 
-export interface FormMiddlewareProps<FP = {}> extends MiddlewareProps {
+export interface MiddlewareProps<FP = {}> extends GenericMiddlewareProps {
   schema: JSONSchema7Definition;
-  parent: FormMiddlewareProps | null;
+  parent: MiddlewareProps | null;
   data: unknown;
   onChange: Function;
   schemaPath: (string | number)[];
   dataPath: (string | number)[];
-  MiddlewareComponent: React.ComponentType<FormMiddlewareProps>;
+  MiddlewareComponent: React.ComponentType<MiddlewareProps>;
   formProps: FormProps & FP;
-  localRefs?: { [key: string]: SchemaLocalRef };
 }
 
 export interface FormProps {
   schema: JSONSchema7;
-  middlewares: React.ComponentType<FormMiddlewareProps> | React.ComponentType<FormMiddlewareProps>[];
+  middlewares: React.ComponentType<MiddlewareProps> | React.ComponentType<MiddlewareProps>[];
   data?: unknown;
   onChange?: (data: unknown) => void;
 }
